@@ -1,0 +1,6 @@
+init_database.sql
+test_account.sql
+config.json
+routes/__pycache__
+utils/__pycache__
+flask_session/
