@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <title>로그인 | 테스트 페이지</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 2rem; }
+    .card { max-width: 480px; margin: 0 auto; border: 1px solid #ddd; border-radius: 8px; padding: 1.25rem; }
+    .row { margin-bottom: 0.75rem; }
+    label { display: block; margin-bottom: 0.25rem; font-weight: 600; }
+    input[type="text"], input[type="password"] { width: 100%; padding: 0.6rem; border: 1px solid #ccc; border-radius: 6px; }
+    button { padding: 0.6rem 1rem; border: 0; background: #2563eb; color: #fff; border-radius: 6px; cursor: pointer; }
+    button:disabled { opacity: 0.6; cursor: not-allowed; }
+    .msg { margin-top: 0.75rem; font-size: 0.95rem; }
+    .msg.error { color: #b91c1c; }
+    .msg.success { color: #065f46; }
+    .help { margin-top: 1rem; font-size: 0.9rem; }
+    a.btn-link { display: inline-block; margin-top: 0.5rem; color: #2563eb; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>로그인</h2>
+    <form id="loginForm">
+      <div class="row">
+        <label for="student_id">학번</label>
+        <input id="student_id" name="student_id" type="text" placeholder="예: 2400001" required />
+      </div>
+      <div class="row">
+        <label for="password">비밀번호</label>
+        <input id="password" name="password" type="password" placeholder="비밀번호" required />
+      </div>
+      <button id="loginBtn" type="submit">로그인</button>
+      <div id="msg" class="msg"></div>
+    </form>
+
+    <div class="help">
+      테스트 흐름
+      <ol>
+        <li>학번/비밀번호로 로그인</li>
+        <li>아래 링크로 이동하여 게시물/댓글/좋아요 테스트</li>
+      </ol>
+      <a class="btn-link" href="/post_page">게시물 작성/테스트 페이지로 이동</a>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById('loginForm');
+    const msg = document.getElementById('msg');
+    const btn = document.getElementById('loginBtn');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      msg.textContent = '';
+      msg.className = 'msg';
+      btn.disabled = true;
+
+      const student_id = document.getElementById('student_id').value.trim();
+      const password = document.getElementById('password').value;
+
+      try {
+        const res = await fetch('/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ student_id, password })
+        });
+
+        const data = await res.json();
+
+        if (res.ok && (data.status === 'success' || data.status === 'admin')) {
+          msg.textContent = data.message || '로그인 성공';
+          msg.className = 'msg success';
+          // 0.8초 후 게시물 페이지로 이동
+          setTimeout(() => { window.location.href = '/post_page'; }, 800);
+        } else {
+          msg.textContent = data.message || '로그인 실패';
+          msg.className = 'msg error';
+        }
+      } catch (err) {
+        msg.textContent = '네트워크 오류 또는 서버 오류가 발생했습니다.';
+        msg.className = 'msg error';
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

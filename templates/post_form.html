@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <title>게시물 테스트 페이지</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root { --pri:#2563eb; --ok:#065f46; --err:#b91c1c; }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 2rem; }
+    .wrap { max-width: 860px; margin: 0 auto; display: grid; gap: 1rem; }
+    .card { border: 1px solid #ddd; border-radius: 10px; padding: 1rem 1.25rem; }
+    h2 { margin: 0.2rem 0 0.8rem; font-size: 1.25rem; }
+    .row { margin-bottom: 0.6rem; }
+    label { display: block; font-weight: 600; margin-bottom: 0.25rem; }
+    input[type="text"], textarea { width: 100%; box-sizing: border-box; padding: 0.6rem; border: 1px solid #ccc; border-radius: 8px; }
+    textarea { min-height: 120px; resize: vertical; }
+    .hor { display: flex; gap: 0.75rem; align-items: center; }
+    .muted { color: #666; font-size: 0.9rem; }
+    button { padding: 0.6rem 1rem; border: 0; background: var(--pri); color: #fff; border-radius: 8px; cursor: pointer; }
+    button:disabled { opacity: 0.6; cursor: not-allowed; }
+    .msg { margin-top: 0.5rem; font-size: 0.95rem; }
+    .msg.ok { color: var(--ok); }
+    .msg.err { color: var(--err); }
+    .pill { display: inline-block; padding: 0.25rem 0.5rem; background: #eef2ff; color: #3730a3; border-radius: 999px; font-size: 0.85rem; }
+    .grid-2 { display: grid; gap: 1rem; grid-template-columns: 1fr 1fr; }
+    @media (max-width: 800px) { .grid-2 { grid-template-columns: 1fr; } }
+    a.btn-link { color: var(--pri); text-decoration: none; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="hor" style="justify-content: space-between;">
+        <h2>게시물/댓글/좋아요 테스트</h2>
+        <div class="hor" style="gap:0.5rem">
+          <a class="btn-link" href="/login_page">로그인 페이지</a>
+          <button id="logoutBtn" type="button" style="background:#111827">로그아웃</button>
+        </div>
+      </div>
+      <div class="muted">세션 기반으로 동작합니다. 먼저 로그인 페이지에서 로그인하세요.</div>
+      <div class="muted">마지막으로 생성한 게시물 ID: <span id="lastPostId" class="pill">없음</span></div>
+    </div>
+
+    <div class="card">
+      <h2>1) 게시물 작성 (POST /posts)</h2>
+      <form id="postForm">
+        <div class="row">
+          <label for="title">제목</label>
+          <input id="title" name="title" type="text" placeholder="제목" required />
+        </div>
+        <div class="row">
+          <label for="content">내용</label>
+          <textarea id="content" name="content" placeholder="게시물 내용을 입력하세요" required></textarea>
+        </div>
+        <div class="row hor">
+          <label class="hor" style="gap:0.4rem">
+            <input id="post_anonymous" type="checkbox" />
+            익명으로 작성
+          </label>
+          <button id="postBtn" type="submit">게시물 작성</button>
+        </div>
+        <div id="postMsg" class="msg"></div>
+      </form>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <h2>2) 댓글 작성 (POST /posts/<id>/comments)</h2>
+        <form id="commentForm">
+          <div class="row">
+            <label for="comment_post_id">게시물 ID</label>
+            <input id="comment_post_id" type="text" placeholder="예: 1 (미입력 시 마지막 생성 ID 사용)" />
+          </div>
+          <div class="row">
+            <label for="comment_content">댓글 내용</label>
+            <textarea id="comment_content" placeholder="댓글 내용을 입력하세요" required></textarea>
+          </div>
+          <div class="row hor">
+            <label class="hor" style="gap:0.4rem">
+              <input id="comment_anonymous" type="checkbox" />
+              익명 댓글
+            </label>
+            <button id="commentBtn" type="submit">댓글 작성</button>
+          </div>
+          <div id="commentMsg" class="msg"></div>
+        </form>
+      </div>
+
+      <div class="card">
+        <h2>3) 좋아요 토글 (POST /posts/<id>/like)</h2>
+        <form id="likeForm">
+          <div class="row">
+            <label for="like_post_id">게시물 ID</label>
+            <input id="like_post_id" type="text" placeholder="예: 1 (미입력 시 마지막 생성 ID 사용)" />
+          </div>
+          <div class="row hor">
+            <button id="likeBtn" type="submit">좋아요 토글</button>
+          </div>
+          <div id="likeMsg" class="msg"></div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="card">
+      <h2>4) 게시물 목록 조회 (GET /posts)</h2>
+      <div class="row hor">
+        <label>페이지 <input id="list_page" type="number" value="1" min="1" style="width:80px"></label>
+        <label>크기 <input id="list_size" type="number" value="10" min="1" max="100" style="width:80px"></label>
+        <button id="listLoadBtn" type="button">목록 불러오기</button>
+        <button id="listPrevBtn" type="button">이전</button>
+        <button id="listNextBtn" type="button">다음</button>
+        <span id="listInfo" class="muted"></span>
+      </div>
+      <div id="postsContainer"></div>
+    </div>
+  </div>
+
+  <script>
+    let lastPostId = null;
+
+    const $ = (sel) => document.querySelector(sel);
+    const setMsg = (el, text, ok = false, err = false) => {
+      el.textContent = text || '';
+      el.className = 'msg' + (ok ? ' ok' : err ? ' err' : '');
+    };
+    const withSession = { credentials: 'include' };
+
+    // 로그아웃
+    $('#logoutBtn').addEventListener('click', async () => {
+      try {
+        const res = await fetch('/logout', { method: 'POST', ...withSession });
+        if (res.ok) {
+          alert('로그아웃 완료');
+          window.location.href = '/login_page';
+        } else {
+          alert('로그아웃 실패');
+        }
+      } catch (e) {
+        alert('네트워크 오류');
+      }
+    });
+
+    // 게시물 작성
+    $('#postForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const msg = $('#postMsg');
+      setMsg(msg, '');
+      $('#postBtn').disabled = true;
+
+      const title = $('#title').value.trim();
+      const content = $('#content').value.trim();
+      const is_anonymous = $('#post_anonymous').checked;
+
+      if (!title || !content) {
+        setMsg(msg, '제목과 내용을 입력하세요.', false, true);
+        $('#postBtn').disabled = false;
+        return;
+      }
+
+      try {
+        const res = await fetch('/posts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          ...withSession,
+          body: JSON.stringify({ title, content, is_anonymous })
+        });
+        const data = await res.json();
+        if (res.status === 201 && data.status === 'success') {
+          lastPostId = data.post_id;
+          $('#lastPostId').textContent = String(lastPostId);
+          setMsg(msg, `게시물 작성 성공 (post_id=${lastPostId})`, true, false);
+          // 댓글/좋아요 입력값에 자동 반영
+          if ($('#comment_post_id').value.trim() === '') $('#comment_post_id').value = lastPostId;
+          if ($('#like_post_id').value.trim() === '') $('#like_post_id').value = lastPostId;
+        } else {
+          setMsg(msg, data.message || '작성 실패', false, true);
+        }
+      } catch (err) {
+        setMsg(msg, '네트워크 오류 또는 서버 오류가 발생했습니다.', false, true);
+      } finally {
+        $('#postBtn').disabled = false;
+      }
+    });
+
+    // 댓글 작성
+    $('#commentForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const msg = $('#commentMsg');
+      setMsg(msg, '');
+      $('#commentBtn').disabled = true;
+
+      const pidRaw = $('#comment_post_id').value.trim();
+      const pid = pidRaw || (lastPostId != null ? String(lastPostId) : '');
+      if (!pid) {
+        setMsg(msg, '게시물 ID를 입력하거나 먼저 게시물을 생성하세요.', false, true);
+        $('#commentBtn').disabled = false;
+        return;
+      }
+      const content = $('#comment_content').value.trim();
+      const is_anonymous = $('#comment_anonymous').checked;
+      if (!content) {
+        setMsg(msg, '댓글 내용을 입력하세요.', false, true);
+        $('#commentBtn').disabled = false;
+        return;
+      }
+
+      try {
+        const res = await fetch(`/posts/${encodeURIComponent(pid)}/comments`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          ...withSession,
+          body: JSON.stringify({ content, is_anonymous })
+        });
+        const data = await res.json();
+        if (res.status === 201 && data.status === 'success') {
+          setMsg(msg, `댓글 작성 성공 (comment_id=${data.comment_id})`, true, false);
+        } else {
+          setMsg(msg, data.message || '댓글 작성 실패', false, true);
+        }
+      } catch (err) {
+        setMsg(msg, '네트워크 오류 또는 서버 오류가 발생했습니다.', false, true);
+      } finally {
+        $('#commentBtn').disabled = false;
+      }
+    });
+
+    // 좋아요 토글
+    $('#likeForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const msg = $('#likeMsg');
+      setMsg(msg, '');
+      $('#likeBtn').disabled = true;
+
+      const pidRaw = $('#like_post_id').value.trim();
+      const pid = pidRaw || (lastPostId != null ? String(lastPostId) : '');
+      if (!pid) {
+        setMsg(msg, '게시물 ID를 입력하거나 먼저 게시물을 생성하세요.', false, true);
+        $('#likeBtn').disabled = false;
+        return;
+      }
+
+      try {
+        const res = await fetch(`/posts/${encodeURIComponent(pid)}/like`, {
+          method: 'POST',
+          ...withSession
+        });
+        const data = await res.json();
+        if (res.ok && data.status === 'success') {
+          setMsg(msg, `liked=${data.liked ? 'true' : 'false'}, like_count=${data.like_count}`, true, false);
+        } else {
+          setMsg(msg, data.message || '좋아요 실패', false, true);
+        }
+      } catch (err) {
+        setMsg(msg, '네트워크 오류 또는 서버 오류가 발생했습니다.', false, true);
+      } finally {
+        $('#likeBtn').disabled = false;
+      }
+    });
+    // 게시물 목록 조회
+    const state = { page: 1, size: 10, total: 0 };
+
+    function renderPosts(payload) {
+      const c = document.getElementById('postsContainer');
+      const items = (payload && payload.items) || [];
+      state.page = payload.page;
+      state.size = payload.size;
+      state.total = payload.total;
+
+      const $lp = document.getElementById('list_page');
+      const $ls = document.getElementById('list_size');
+      const $info = document.getElementById('listInfo');
+
+      if ($lp) $lp.value = state.page;
+      if ($ls) $ls.value = state.size;
+      if ($info) {
+        const totalPages = Math.max(1, Math.ceil(state.total / state.size));
+        $info.textContent = `페이지 ${state.page}/${totalPages}, 전체 ${state.total}`;
+      }
+
+      if (!c) return;
+      if (!items.length) {
+        c.innerHTML = '<div class="muted">게시물이 없습니다.</div>';
+        return;
+      }
+
+      c.innerHTML = items.map((it) => `
+        <div class="card" style="margin-top:0.5rem">
+          <div class="hor" style="justify-content: space-between;">
+            <strong>${it.title ? escapeHtml(it.title) : '(제목 없음)'}</strong>
+            <span class="pill">${it.student_name || '익명'}</span>
+          </div>
+          <div class="muted" style="margin-top:0.4rem; white-space: pre-wrap;">${escapeHtml(it.content || '')}</div>
+          <div class="muted" style="margin-top:0.4rem">
+            ❤️ ${it.like_count} · 💬 ${it.comment_count} · ${it.created_at}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, '&')
+        .replace(/</g, '<')
+        .replace(/>/g, '>');
+    }
+
+    async function loadPosts(page, size) {
+      try {
+        const p = page || Number(document.getElementById('list_page').value) || 1;
+        const s = size || Number(document.getElementById('list_size').value) || 10;
+        const res = await fetch(`/posts?page=${encodeURIComponent(p)}&size=${encodeURIComponent(s)}`, { ...withSession });
+        const data = await res.json();
+        if (res.ok && data.status === 'success') {
+          renderPosts(data);
+        } else {
+          alert(data.message || '목록 조회 실패');
+        }
+      } catch (e) {
+        alert('네트워크 오류 또는 서버 오류가 발생했습니다.');
+      }
+    }
+
+    // 이벤트 바인딩
+    (function bindListEvents() {
+      const $lp = document.getElementById('list_page');
+      const $ls = document.getElementById('list_size');
+      const $load = document.getElementById('listLoadBtn');
+      const $prev = document.getElementById('listPrevBtn');
+      const $next = document.getElementById('listNextBtn');
+
+      if ($load) {
+        $load.addEventListener('click', () => loadPosts());
+      }
+      if ($prev) {
+        $prev.addEventListener('click', () => {
+          const p = Math.max(1, (Number($lp.value) || 1) - 1);
+          loadPosts(p, Number($ls.value) || 10);
+        });
+      }
+      if ($next) {
+        $next.addEventListener('click', () => {
+          const p = (Number($lp.value) || 1) + 1;
+          loadPosts(p, Number($ls.value) || 10);
+        });
+      }
+    })();
+
+    // 초기 로드
+    loadPosts(1, 10);
+  </script>
+</body>
+</html>

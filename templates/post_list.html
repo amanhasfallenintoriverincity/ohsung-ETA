@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <title>게시물 목록</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root { --pri:#2563eb; --ok:#065f46; --muted:#6b7280; }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 2rem; }
+    .wrap { max-width: 900px; margin: 0 auto; display: grid; gap: 1rem; }
+    .card { border: 1px solid #ddd; border-radius: 10px; padding: 1rem 1.25rem; }
+    .hor { display:flex; gap:0.5rem; align-items:center; }
+    .pill { padding:0.25rem 0.5rem; background:#eef2ff; color:#3730a3; border-radius:999px; font-size:0.85rem; }
+    a { color: var(--pri); text-decoration: none; }
+    .muted { color: var(--muted); font-size:0.95rem; }
+    .post-title { font-size:1.05rem; margin:0; }
+    .meta { color:var(--muted); font-size:0.9rem; margin-top:0.4rem; }
+    .list { display:grid; gap:0.75rem; }
+    .btn { background:var(--pri); color:#fff; padding:0.45rem 0.7rem; border-radius:8px; border:0; cursor:pointer; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card hor" style="justify-content:space-between;">
+      <div>
+        <strong>게시물 목록</strong>
+        <div class="muted">등록된 게시물을 최신순으로 표시합니다. 제목을 클릭하면 상세 페이지로 이동합니다.</div>
+      </div>
+      <div class="hor">
+        <a class="btn" href="/post_page">글쓰기 (테스트)</a>
+        <a class="btn" href="/login_page" style="background:#111827">로그인</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="hor" style="gap:0.75rem; align-items:center; margin-bottom:0.6rem;">
+        <label class="muted">페이지</label>
+        <input id="page" type="number" value="1" min="1" style="width:80px; padding:0.3rem;">
+        <label class="muted">크기</label>
+        <input id="size" type="number" value="10" min="1" max="100" style="width:80px; padding:0.3rem;">
+        <button id="loadBtn" class="btn" type="button">불러오기</button>
+        <button id="prevBtn" class="btn" type="button">이전</button>
+        <button id="nextBtn" class="btn" type="button">다음</button>
+        <div id="info" class="muted" style="margin-left: auto;"></div>
+      </div>
+
+      <div id="list" class="list"></div>
+    </div>
+  </div>
+
+  <script>
+    const withSession = { credentials: 'include' };
+    const $ = sel => document.querySelector(sel);
+
+    function escapeHtml(str) {
+      return String(str || '')
+        .replace(/&/g, '&')
+        .replace(/</g, '<')
+        .replace(/>/g, '>');
+    }
+
+    function renderList(payload) {
+      const list = $('#list');
+      const items = (payload && payload.items) || [];
+      const page = payload.page || 1;
+      const size = payload.size || 10;
+      const total = payload.total || 0;
+      const totalPages = Math.max(1, Math.ceil(total / size));
+
+      $('#page').value = page;
+      $('#size').value = size;
+      $('#info').textContent = `페이지 ${page}/${totalPages} · 전체 ${total}`;
+
+      if (!items.length) {
+        list.innerHTML = '<div class="muted">게시물이 없습니다.</div>';
+        return;
+      }
+
+      list.innerHTML = items.map(it => `
+        <div class="card" style="margin-top:0.25rem;">
+          <div class="hor" style="justify-content:space-between;">
+            <div>
+              <a class="post-link" href="/posts/${it.post_id}/page"><h3 class="post-title" style="margin:0">${escapeHtml(it.title)}</h3></a>
+              <div class="muted" style="margin-top:0.35rem; white-space:pre-wrap;">${escapeHtml(it.content)}</div>
+            </div>
+            <div style="text-align:right;">
+              <div class="pill">${escapeHtml(it.student_name || '익명')}</div>
+              <div class="meta">❤️ ${it.like_count} · 💬 ${it.comment_count}</div>
+              <div class="muted" style="margin-top:0.4rem;">${escapeHtml(it.created_at)}</div>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    async function loadPosts(page, size) {
+      try {
+        const p = page || Number($('#page').value) || 1;
+        const s = size || Number($('#size').value) || 10;
+        const res = await fetch(`/posts?page=${encodeURIComponent(p)}&size=${encodeURIComponent(s)}`, { ...withSession });
+        const data = await res.json();
+        if (res.ok && data.status === 'success') {
+          renderList(data);
+        } else {
+          alert(data.message || '목록 조회 실패');
+        }
+      } catch (e) {
+        alert('네트워크 오류 또는 서버 오류가 발생했습니다.');
+      }
+    }
+
+    (function bind() {
+      $('#loadBtn').addEventListener('click', () => loadPosts());
+      $('#prevBtn').addEventListener('click', () => {
+        const p = Math.max(1, (Number($('#page').value) || 1) - 1);
+        loadPosts(p, Number($('#size').value) || 10);
+      });
+      $('#nextBtn').addEventListener('click', () => {
+        const p = (Number($('#page').value) || 1) + 1;
+        loadPosts(p, Number($('#size').value) || 10);
+      });
+    })();
+
+    // initial
+    loadPosts(1, 10);
+  </script>
+</body>
+</html>
