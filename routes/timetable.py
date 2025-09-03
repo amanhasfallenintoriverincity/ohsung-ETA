@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 import requests
 from datetime import datetime
-from ..utils.config_util     import ConfigManager as Config
+from utils.config_util     import ConfigManager as Config
 
 timetable_bp = Blueprint('timetable', __name__)
 config = Config()
