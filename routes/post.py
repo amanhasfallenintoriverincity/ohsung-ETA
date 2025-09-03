@@ -40,7 +40,7 @@ def _to_bool(value, default=False):
     return default
 
 
-@post_bp.route('/posts', methods=['POST'])
+@post_bp.route('/api/posts/', methods=['POST'])
 def create_post():
     try:
         sid, err = _require_login()
@@ -90,7 +90,7 @@ def create_post():
         }), 500
 
 
-@post_bp.route('/posts', methods=['GET'])
+@post_bp.route('/api/posts/', methods=['GET'])
 def list_posts():
     try:
         # 페이징 파라미터
@@ -167,7 +167,7 @@ def list_posts():
         }), 500
 
 
-@post_bp.route('/posts/<int:post_id>', methods=['GET'])
+@post_bp.route('/api/posts/<int:post_id>/', methods=['GET'])
 def get_post_detail(post_id: int):
     try:
         db = DatabaseManager()
@@ -252,7 +252,7 @@ def get_post_detail(post_id: int):
         }), 500
 
 
-@post_bp.route('/posts/<int:post_id>/comments', methods=['POST'])
+@post_bp.route('/api/posts/<int:post_id>/comments/', methods=['POST'])
 def create_comment(post_id: int):
     try:
         sid, err = _require_login()
@@ -312,7 +312,7 @@ def create_comment(post_id: int):
         }), 500
 
 
-@post_bp.route('/posts/<int:post_id>/like', methods=['POST'])
+@post_bp.route('/api/posts/<int:post_id>/like/', methods=['POST'])
 def toggle_like(post_id: int):
     try:
         sid, err = _require_login()
