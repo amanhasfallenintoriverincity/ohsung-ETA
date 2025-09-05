@@ -1,5 +1,5 @@
 from flask import Blueprint, request, session, jsonify
-from ..utils.database_util import DatabaseManager
+from utils.database_util import DatabaseManager
 
 auth_bp = Blueprint('auth', __name__)
 

@@ -4,3 +4,4 @@ config.json
 routes/__pycache__
 utils/__pycache__
 flask_session/
+__pycache__/

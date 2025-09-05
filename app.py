@@ -11,7 +11,6 @@ from routes.meal import meal_bp
 from routes.schedule import schedule_bp
 from routes.timetable import timetable_bp
 from routes.post import post_bp
-from routes.web import web_bp
 
 app = Flask(__name__)
 
@@ -42,11 +41,10 @@ app.register_blueprint(meal_bp)
 app.register_blueprint(schedule_bp)
 app.register_blueprint(timetable_bp)
 app.register_blueprint(post_bp)
-app.register_blueprint(web_bp)
 
 @app.route("/")
 def home():
-    return redirect(url_for('web.login_page'))
+    return redirect(url_for('main.main_page'))
 
 if __name__ == "__main__":
     try:
