@@ -489,11 +489,11 @@ def list_sub_comments(post_id: int, comment_id: int):
             comment_id=comment_id
         ).result
 
-        items = []
+        sub_comments = []
         for r in rows:
             (scid, s_student_id, s_student_name, s_content, s_is_anonymous, s_created_at) = r
             s_anon = bool(s_is_anonymous)
-            items.append({
+            sub_comments.append({
                 "sub_comment_id": scid,
                 "student_id": None if s_anon else s_student_id,
                 "student_name": "익명" if s_anon else s_student_name,
@@ -504,7 +504,7 @@ def list_sub_comments(post_id: int, comment_id: int):
 
         return jsonify({
             "status": "success",
-            "items": items
+            "sub_comments": sub_comments
         })
     except Exception as e:
         return jsonify({
