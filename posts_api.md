@@ -1,6 +1,6 @@
 # Posts API (routes/post.py) 정리
 
-이 문서는 `routes/post.py`에 구현된 게시물 관련 REST API를 요약합니다. 공통 사항, 각 엔드포인트의 동작, 입력/출력 형식, 주요 예외 처리 및 DB 상호작용을 간단히 정리합니다.
+이 문서는 `routes/post.py`에 구현된 게시물 관련 REST API를 요약합니다. 공통 사항, 각 엔드포인트의 동작, 입력/출력 형식, 주요 예외 처리 및 DB 상호작용을 간단히 정리합니다. 모든 경로는 `/api/posts`를 기준으로 합니다.
 
 ---
 
@@ -19,7 +19,7 @@
 
 ---
 
-## POST /posts
+## POST /api/posts/
 게시물 생성
 
 - 인증: 필요
@@ -46,12 +46,14 @@
 
 예:
 ```bash
-curl -X POST /posts -H "Content-Type: application/json" -d '{"title":"제목","content":"내용","is_anonymous":true}'
+curl -X POST /api/posts/ \
+  -H "Content-Type: application/json" \
+  -d '{"title":"제목","content":"내용","is_anonymous":true}'
 ```
 
 ---
 
-## GET /posts
+## GET /api/posts/
 게시물 목록 (페이징)
 
 - 인증: 불필요 (공개 목록)
@@ -60,7 +62,7 @@ curl -X POST /posts -H "Content-Type: application/json" -d '{"title":"제목","c
   - `size` (int, default 10, min 1, max 100)
 - 동작:
   - 전체 개수 조회 `SELECT COUNT(*) FROM Posts`
-  - 게시물과 작성자(Students) 조인으로 목록 조회. 각 항목에 댓글 수(subquery) 포함.
+  - 게시물과 작성자(Students) 조인으로 목록 조회. 각 항목에 댓글 수(subquery) 포함. 여기서 댓글 수는 `Comments`만 집계되며 대댓글은 포함되지 않습니다.
   - 익명 글은 `student_id`를 NULL로, `student_name`을 "익명"으로 반환.
 - 응답: 200
   ```json
@@ -89,7 +91,7 @@ curl -X POST /posts -H "Content-Type: application/json" -d '{"title":"제목","c
 
 ---
 
-## POST /posts/<post_id>/comments
+## POST /api/posts/<post_id>/comments/
 댓글 작성
 
 - 인증: 필요
@@ -114,12 +116,79 @@ curl -X POST /posts -H "Content-Type: application/json" -d '{"title":"제목","c
 
 예:
 ```bash
-curl -X POST /posts/1/comments -H "Content-Type: application/json" -d '{"content":"댓글","is_anonymous":false}'
+curl -X POST /api/posts/1/comments/ \
+  -H "Content-Type: application/json" \
+  -d '{"content":"댓글","is_anonymous":false}'
 ```
 
 ---
 
-## POST /posts/<post_id>/like
+## POST /api/posts/<post_id>/comments/<comment_id>/replies/
+대댓글(답글) 작성
+
+- 인증: 필요
+- 경로 파라미터: `post_id` (int), `comment_id` (int)
+- 요청 바디 (JSON):
+  - `content` (string, required)
+  - `is_anonymous` (boolean, optional)
+- 동작:
+  - `comment_id`가 해당 `post_id`에 속하는지 검증.
+  - `Sub_comments`에 삽입, `LAST_INSERT_ID()`로 `sub_comment_id` 반환.
+- 응답:
+  - 성공: 201
+    ```json
+    {
+      "status": "success",
+      "message": "대댓글 작성 성공",
+      "sub_comment_id": 789
+    }
+    ```
+  - 내용 누락: 400, `{"status":"error","message":"대댓글 내용을 입력하세요."}`
+  - 대상 댓글 없음: 404
+
+예:
+```bash
+curl -X POST /api/posts/1/comments/10/replies/ \
+  -H "Content-Type: application/json" \
+  -d '{"content":"대댓글입니다","is_anonymous":true}'
+```
+
+---
+
+## GET /api/posts/<post_id>/comments/<comment_id>/replies/
+특정 댓글의 대댓글 목록 조회
+
+- 인증: 불필요 (공개)
+- 경로 파라미터: `post_id` (int), `comment_id` (int)
+- 동작:
+  - `comment_id`가 해당 `post_id`에 속하는지 검증.
+  - 해당 댓글의 대댓글 목록 조회(작성자 익명 처리).
+- 응답: 200
+  ```json
+  {
+    "status": "success",
+    "items": [
+      {
+        "sub_comment_id": 1,
+        "student_id": null,
+        "student_name": "익명",
+        "content": "대댓글 내용",
+        "is_anonymous": true,
+        "created_at": "2025-08-27 12:02:00"
+      }
+    ]
+  }
+  ```
+- 대상 댓글 없음: 404
+
+예:
+```bash
+curl -X GET /api/posts/1/comments/10/replies/
+```
+
+---
+
+## POST /api/posts/<post_id>/like/
 게시물 좋아요 토글(추가/취소)
 
 - 인증: 필요
@@ -142,19 +211,19 @@ curl -X POST /posts/1/comments -H "Content-Type: application/json" -d '{"content
 
 예:
 ```bash
-curl -X POST /posts/1/like
+curl -X POST /api/posts/1/like/
 ```
 
 ---
 
-## GET /posts/<post_id>
+## GET /api/posts/<post_id>/
 게시물 상세 + 댓글 목록 조회
 
 - 인증: 불필요 (공개)
 - 경로 파라미터: `post_id` (int)
 - 동작:
   - 게시물 상세 조회(작성자명은 익명 처리 반영).
-  - 해당 게시물의 댓글 목록 조회(작성자명 익명 처리).
+  - 해당 게시물의 댓글 목록 조회(작성자명 익명 처리). 대댓글은 포함되지 않으며 별도 API로 조회합니다.
   - 댓글은 `created_at` 오름차순으로 정렬.
 - 응답: 200
   ```json
@@ -192,5 +261,6 @@ curl -X POST /posts/1/like
 - Students (student_id, student_name, ...)
 - Comments (comment_id, post_id, student_id, content, is_anonymous, created_at, ...)
 - PostLikes (post_id, student_id)
+- Sub_comments (sub_comment_id, comment_id, student_id, content, is_anonymous, created_at)
 
 ---
